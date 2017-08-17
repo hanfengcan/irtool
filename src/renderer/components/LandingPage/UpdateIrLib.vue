@@ -48,9 +48,11 @@
       },
       // 下载文件
       loadFile () {
+        // ipcRenderer.send('getBinFile')
         if (this.ostate === true) {
           if (this.comuse === false) {
             this.output = ''
+            this.loadper = 0
             ipcRenderer.send('lirDownload')
           } else {
             this.$message({
@@ -124,6 +126,16 @@
       if (arg.progress) {
         tag.loadper = Number(arg.progress)
       }
+    }
+  })
+
+  ipcRenderer.on('rGetBinFile', function (e, arg) {
+    if (arg.bin) {
+      // tag.output = arg.bin
+      tag.output = ''
+      arg.bin.forEach((str) => {
+        tag.output += (str.toString() + '\n')
+      })
     }
   })
 </script>

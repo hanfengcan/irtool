@@ -1,7 +1,9 @@
 import { ipcMain, dialog } from 'electron'
 import fs from 'fs'
+import path from 'path'
 import usart from './usart'
 import tool from './tool'
+import filetool from './filetool.js'
 
 let port = null
 // let porte = null
@@ -12,13 +14,15 @@ let lirfilestate = null // lir文件下载状态标志
 let lirfileindex = 0
 let lirfileall = 0
 
+let reupdate = 0 // 错误重发
+
 function ipcReg (w) {
   /* headerhint */
   // 打开串口按钮
   ipcMain.on('ComOpenClick', (e, arg) => {
     if (arg.state === true) {
       // porte = e
-      port = new usart.Serialport(arg.com, Number(arg.br))
+      port = new usart.Serialport(arg.com, {baudRate: Number(arg.br)})
       // error
       port.on('error', (err) => {
         console.log('error: ', err)
@@ -73,7 +77,7 @@ function ipcReg (w) {
     // 修改接收回调
     parsersCB = function (arg) {
       console.log('callback rom')
-      if (arg.wstate === tool.ecmd.WORK) {
+      if (arg.wstate === tool.emode.WORK) {
         if (arg.state === true) {
           e.sender.send('rROMClick', {state: true, msg: '修改信息头:\t\tOK'})
         } else if (arg.state === false) {
@@ -85,7 +89,7 @@ function ipcReg (w) {
         e.sender.send('rROMClick', {state: false, msg: '协议出错: \t\t非work'})
       }
     }
-    tool.sendcmd(port, tool.ecmd.SROM)
+    tool.sendcmd(port, tool.ecmd.ROM)
   })
   // 下载lir文件
   ipcMain.on('lirDownload', (e) => {
@@ -96,7 +100,7 @@ function ipcReg (w) {
       parsersCB = function (arg) {
         switch (lirfilestate) {
           case 0:
-            if (arg.state === true) {
+            if ((arg.state === true) && (arg.wstate === tool.emode.UPDATE)) {
               e.sender.send('rlirDownload', {loading: true, msg: '状态:\t\tupdate'})
               // 发送第一个分包
               let fbuf
@@ -120,24 +124,31 @@ function ipcReg (w) {
               loadper = loadper.toFixed(1)
               e.sender.send('rlirDownload', {loading: true, msg: '成功:\t\t' + (lirfileindex + 1) + ' | ' + lirfileall, progress: loadper})
               lirfileindex++ // 指向下一个包
+              reupdate = 0
             } else {
-              e.sender.send('rlirDownload', {loading: true, msg: '失败:\t\t' + '重发: ' + (lirfileindex + 1)})
+              if (reupdate++ < 10) {
+                e.sender.send('rlirDownload', {loading: true, msg: '失败:\t\t' + '重发: ' + (lirfileindex + 1)})
+              } else {
+                e.sender.send('rlirDownload', {loading: false, msg: '重发10次均出错, 退出下载'})
+                lirfilestate = 3
+                reupdate = 0
+              }
             }
             if (lirfileindex < lirfileall) {
               // 继续发送下一个包
               let fbuf
               if (lirfile.length - lirfileindex * 64 > 64) {
                 fbuf = Buffer.alloc(64)
-                lirfile.copy(fbuf, 0, lirfileindex * 64)
               } else {
                 fbuf = Buffer.alloc(lirfile.length - lirfileindex * 64)
-                lirfile.copy(fbuf, 0, lirfileindex + 64)
               }
+              lirfile.copy(fbuf, 0, lirfileindex * 64)
               tool.sendpack(port, fbuf, lirfileindex)
             } else {
               // 切换成工作状态
               lirfilestate = 2
               tool.sendcmd(port, tool.ecmd.UPDATE)
+              console.log('end')
             }
             break
           case 2:
@@ -154,11 +165,16 @@ function ipcReg (w) {
             break
         }
       }
+      // 发送一个设置指令
       tool.sendcmd(port, tool.ecmd.UPDATE)
       /* 状态机结束 */
     } else {
       e.sender.send('rlirDownload', {loading: false, msg: '这是个空文件啊'})
     }
+  })
+  /* updatelrlib */
+  ipcMain.on('getBinFile', (e, arg) => {
+    e.sender.send('rGetBinFile', {bin: filetool.getfileSync(path.join('.', filetool.binpath))})
   })
   /* updateirlib end */
   // 广播

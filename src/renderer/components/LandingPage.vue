@@ -2,7 +2,7 @@
   <div id="wrapper">
     <el-row :gutter="6" class="main">
       <el-col :xs="5" :sm="3" :md="3" :lg="2" class="menu-left">
-        <el-menu default-active="1" @select="handleSelect" theme="dark">
+        <el-menu default-active="2" @select="handleSelect" theme="dark">
           <div class="logo-layout"></div>
           <el-menu-item index="1">导航一</el-menu-item>
           <el-menu-item index="2">导航二</el-menu-item>
@@ -13,7 +13,8 @@
         <div class="header-layout"><HeaderHint></HeaderHint></div>
         <div class="main-content-layout">
           <UpdateIrLib v-show="uilShow"></UpdateIrLib>
-          <MyTemplate v-show="tShow"></MyTemplate>
+          <Createlir v-show="tShow"></Createlir>
+          <!--MyTemplate v-show="tShow"></MyTemplate-->
         </div>
       </el-col>
     </el-row>
@@ -25,11 +26,11 @@
   import HeaderHint from './LandingPage/HeaderHint'
   import UpdateIrLib from './LandingPage/UpdateIrLib'
 
-  import MyTemplate from './LandingPage/MyTemplate'
+  import Createlir from './LandingPage/Createlir'
 
   export default {
     name: 'landing-page',
-    components: { HeaderHint, UpdateIrLib, MyTemplate },
+    components: { HeaderHint, UpdateIrLib, Createlir },
     data: function () {
       return {
         uilShow: true,

@@ -1,7 +1,10 @@
 'use strict'
 
 import { app, BrowserWindow } from 'electron'
+// import path from 'path'
 import ipc from './ipc.js'
+import filetool from './filetool.js'
+// import fs from 'fs'
 
 /**
  * Set `__static` path to static files in production
@@ -33,6 +36,9 @@ function createWindow () {
   })
 
   ipc.ipcReg(mainWindow)
+  filetool.createFolder()
+  // console.log(path.join(path.resolve(), filetool.binpath))
+  // console.log('re: ', filetool.getfileSync(path.join(path.resolve(), filetool.binpath)))
 }
 
 app.on('ready', createWindow)
